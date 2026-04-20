@@ -3,11 +3,14 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { team } from "@/data/team";
 import { TelegramIcon, SoundOnIcon, SoundOffIcon } from "@/components/Icon";
-import { click, startAmbient, stopAmbient } from "@/lib/sound";
+import { click } from "@/lib/sound";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
+
+const TITLE_REDIRECT = "https://t.me/cybsexx/";
+const KL_LINKS_REDIRECT = "https://t.me/cybersexcc";
 
 function Index() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -16,10 +19,14 @@ function Index() {
   const cornerLRef = useRef<HTMLDivElement>(null);
   const cornerRRef = useRef<HTMLDivElement>(null);
   const backBtnRef = useRef<HTMLButtonElement>(null);
+  const blackCoverRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const profileRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [active, setActive] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [sound, setSound] = useState(false);
+  const activeRef = useRef<string | null>(null);
+  activeRef.current = active;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -66,18 +73,6 @@ function Index() {
       card.addEventListener("click", () => {
         if (hasDragged) return;
         onFirstInteraction();
-        const baseAngle = parseFloat(card.dataset.baseAngle || "0");
-        const angle = baseAngle + currentAngle;
-        const z = Math.cos(angle) * config.radius;
-        const depthRatio = (z + config.radius) / (config.radius * 2);
-        if (depthRatio <= 0.5) {
-          const cardIndex = parseInt(card.dataset.index || "0");
-          const currentRot = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-          const targetRot = Math.PI * 2 - cardIndex * config.cardSpacing;
-          targetAngle += targetRot - currentRot;
-          click(880, 0.04);
-          return;
-        }
         const slug = card.getAttribute("data-profile");
         if (slug) {
           click(660);
@@ -229,49 +224,71 @@ function Index() {
       const spans = taglineRef.current.querySelectorAll("span.word");
       gsap.fromTo(spans, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.8, stagger: 0.18, delay: 1.2, ease: "power2.out" });
     }
-    if (cornerLRef.current) gsap.to(cornerLRef.current, { opacity: 0.5, duration: 1, delay: 1.5 });
-    if (cornerRRef.current) gsap.to(cornerRRef.current, { opacity: 0.5, duration: 1, delay: 1.5 });
+    if (cornerLRef.current) gsap.to(cornerLRef.current, { opacity: 0.6, duration: 1, delay: 1.5 });
+    if (cornerRRef.current) gsap.to(cornerRRef.current, { opacity: 0.6, duration: 1, delay: 1.5 });
+  }, []);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.volume = 0.4;
+    const tryPlay = async () => {
+      try {
+        await audio.play();
+        setSound(true);
+      } catch {
+        const onFirst = async () => {
+          try { await audio.play(); setSound(true); } catch { /* noop */ }
+          window.removeEventListener("pointerdown", onFirst);
+          window.removeEventListener("keydown", onFirst);
+        };
+        window.addEventListener("pointerdown", onFirst, { once: true });
+        window.addEventListener("keydown", onFirst, { once: true });
+      }
+    };
+    tryPlay();
   }, []);
 
   const openProfile = (slug: string) => {
-    if (active) return;
+    if (activeRef.current) return;
     setActive(slug);
+    if (blackCoverRef.current) blackCoverRef.current.classList.add("active");
     const landingEls = [titleRef.current, taglineRef.current, cornerLRef.current, cornerRRef.current];
     landingEls.forEach((el) => {
-      if (el) gsap.to(el, { autoAlpha: 0, duration: 0.5, ease: "power2.inOut" });
+      if (el) gsap.to(el, { autoAlpha: 0, duration: 0.4, ease: "power2.inOut" });
     });
-    setTimeout(() => {
-      const profEl = profileRefs.current[slug];
-      if (profEl) {
-        profEl.classList.add("active");
-        gsap.fromTo(profEl, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.7, ease: "power2.out" });
-      }
-      const back = backBtnRef.current;
-      if (back) {
-        back.classList.add("visible");
-        gsap.fromTo(back, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5, ease: "power2.out" });
-      }
-    }, 500);
+    const profEl = profileRefs.current[slug];
+    if (profEl) {
+      profEl.classList.add("active");
+      gsap.fromTo(profEl, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5, ease: "power2.out", delay: 0.15 });
+    }
+    const back = backBtnRef.current;
+    if (back) {
+      back.classList.add("visible");
+      gsap.fromTo(back, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.4, ease: "power2.out", delay: 0.2 });
+    }
     history.pushState(null, "", "#" + slug);
   };
 
   const closeProfile = () => {
-    if (!active) return;
+    const cur = activeRef.current;
+    if (!cur) return;
     click(440);
-    const profEl = profileRefs.current[active];
+    const profEl = profileRefs.current[cur];
     if (profEl) {
-      gsap.to(profEl, { autoAlpha: 0, duration: 0.5, ease: "power2.inOut", onComplete: () => profEl.classList.remove("active") });
+      gsap.to(profEl, { autoAlpha: 0, duration: 0.4, ease: "power2.inOut", onComplete: () => profEl.classList.remove("active") });
     }
     const back = backBtnRef.current;
     if (back) {
       gsap.to(back, { autoAlpha: 0, duration: 0.3, onComplete: () => back.classList.remove("visible") });
     }
+    if (blackCoverRef.current) blackCoverRef.current.classList.remove("active");
     setTimeout(() => {
       const landingEls = [titleRef.current, taglineRef.current, cornerLRef.current, cornerRRef.current];
       landingEls.forEach((el, i) => {
-        if (el) gsap.to(el, { autoAlpha: i === 0 ? 1 : i === 1 ? 1 : 0.5, duration: 0.7, ease: "power2.out" });
+        if (el) gsap.to(el, { autoAlpha: i === 0 ? 1 : i === 1 ? 1 : 0.6, duration: 0.6, ease: "power2.out" });
       });
-    }, 350);
+    }, 300);
     setActive(null);
     history.pushState(null, "", window.location.pathname);
   };
@@ -280,8 +297,8 @@ function Index() {
     const onPop = () => {
       const hash = window.location.hash.replace("#", "");
       const exists = team.find((m) => m.slug === hash);
-      if (exists && !active) openProfile(hash);
-      else if (!exists && active) closeProfile();
+      if (exists && !activeRef.current) openProfile(hash);
+      else if (!exists && activeRef.current) closeProfile();
     };
     window.addEventListener("popstate", onPop);
     const initialHash = window.location.hash.replace("#", "");
@@ -292,35 +309,46 @@ function Index() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const copyTelegram = (e: React.MouseEvent, url: string) => {
+  const handleLinkClick = (e: React.MouseEvent, slug: string) => {
     e.preventDefault();
     click(660);
-    navigator.clipboard?.writeText(url).then(() => {
-      setToast("copied: " + url);
-      window.setTimeout(() => setToast(null), 1800);
-    });
+    const url = slug === "kl" ? KL_LINKS_REDIRECT : team.find((m) => m.slug === slug)?.telegram || "";
+    if (!url) return;
     window.open(url, "_blank", "noopener,noreferrer");
+    navigator.clipboard?.writeText(url).then(() => {
+      setToast("opened: " + url);
+      window.setTimeout(() => setToast(null), 1800);
+    }).catch(() => { /* noop */ });
+  };
+
+  const handleTitleClick = () => {
+    click(660);
+    window.open(TITLE_REDIRECT, "_blank", "noopener,noreferrer");
   };
 
   const toggleSound = () => {
     click(440);
-    if (sound) { stopAmbient(); setSound(false); } else { startAmbient(); setSound(true); }
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (sound) { audio.pause(); setSound(false); }
+    else { audio.play().then(() => setSound(true)).catch(() => { /* noop */ }); }
   };
 
   const quote = "even the darkness has arms";
 
   return (
     <div>
-      <img src="/images/clouds.jpg" alt="" className="rain-clouds" draggable={false} />
+      <img src="/images/bg.gif" alt="" className="bg-stars" draggable={false} />
       <div className="black-fade" />
       <div className="scanlines" />
       <div className="grain-overlay" />
       <div className="flicker" />
 
-      <div ref={titleRef} className="page-title">
-        <span className="title-sub">lost</span>
-        <br />
-        <span className="title-main"><i>lost.移动</i></span>
+      <audio ref={audioRef} src="/audio/song.mp3" loop preload="auto" />
+      <div ref={blackCoverRef} className="bg-black-cover" />
+
+      <div ref={titleRef} className="page-title" onClick={handleTitleClick}>
+        <span className="title-main">lost.移动</span>
       </div>
 
       <div className="vortex-container" ref={containerRef}>
@@ -375,7 +403,7 @@ function Index() {
             <div className="profile-section">
               <span className="profile-section-label">links</span>
               <div className="profile-links">
-                <a href={m.telegram} className="profile-link" onClick={(e) => copyTelegram(e, m.telegram)}>
+                <a href="#" className="profile-link" onClick={(e) => handleLinkClick(e, m.slug)}>
                   <TelegramIcon size={12} />
                   telegram
                 </a>
@@ -411,9 +439,9 @@ function Index() {
 
       <button ref={backBtnRef} className="back-btn" onClick={closeProfile}>← return</button>
 
-      <button className="sound-btn" onClick={toggleSound} aria-label="toggle ambient sound">
+      <button className="sound-btn" onClick={toggleSound} aria-label="toggle sound">
         {sound ? <SoundOnIcon size={12} /> : <SoundOffIcon size={12} />}
-        <span>{sound ? "ambient" : "muted"}</span>
+        <span>{sound ? "sound on" : "muted"}</span>
       </button>
 
       {toast && <div className="copy-toast show">{toast}</div>}
