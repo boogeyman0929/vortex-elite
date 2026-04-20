@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
-import { team } from "@/data/team";
+import { team, type Member } from "@/data/team";
 import { ArrowLeftIcon, TelegramIcon, ShieldIcon, SparkIcon } from "@/components/Icon";
 import { click } from "@/lib/sound";
 
@@ -31,7 +31,7 @@ export const Route = createFileRoute("/$slug")({
 });
 
 function Profile() {
-  const { member } = Route.useLoaderData();
+  const { member } = Route.useLoaderData() as { member: Member };
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
