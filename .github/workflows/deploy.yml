@@ -1,8 +1,8 @@
-name: Deploy static content to Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ['main']
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -11,33 +11,50 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'pages'
+  group: "pages"
   cancel-in-progress: true
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-      - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: lts/*
-          cache: 'npm'
+          node-version: 20
+
       - name: Install dependencies
         run: npm install
+
       - name: Build
         run: npm run build
+
+      - name: Create index.html (fix for SSR build)
+        run: |
+          echo '<!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="UTF-8" />
+              <title>lost</title>
+              <link rel="stylesheet" href="/assets/styles-b4zY2JEb.css" />
+            </head>
+            <body>
+              <div id="root"></div>
+              <script type="module" src="/assets/index-DqaSvJ5k.js"></script>
+            </body>
+          </html>' > dist/client/index.html
+
       - name: Setup Pages
-        uses: actions/configure-pages@v6
+        uses: actions/configure-pages@v5
+
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist/client'
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+          path: ./dist/client
+
+      - name: Deploy
+        uses: actions/deploy-pages@v4
