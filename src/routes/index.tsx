@@ -1,41 +1,422 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Vortex } from "@/components/Vortex";
-import { AmbientToggle } from "@/components/AmbientToggle";
+import { useEffect, useRef, useState } from "react";
+import { gsap } from "gsap";
+import { team } from "@/data/team";
+import { TelegramIcon, SoundOnIcon, SoundOffIcon } from "@/components/Icon";
+import { click, startAmbient, stopAmbient } from "@/lib/sound";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
 function Index() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const taglineRef = useRef<HTMLDivElement>(null);
+  const cornerLRef = useRef<HTMLDivElement>(null);
+  const cornerRRef = useRef<HTMLDivElement>(null);
+  const backBtnRef = useRef<HTMLButtonElement>(null);
+  const profileRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [active, setActive] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [sound, setSound] = useState(false);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const cards = Array.from(container.querySelectorAll<HTMLDivElement>(".vortex-card"));
+    const total = cards.length;
+    if (total === 0) return;
+
+    let currentAngle = 0;
+    let targetAngle = 0;
+    let isDragging = false;
+    let hasDragged = false;
+    let startX = 0;
+    let startAngle = 0;
+    let hoveredCard: HTMLDivElement | null = null;
+    let autoRotateSpeed = 0;
+    let velocity = 0;
+    let hasInteracted = false;
+    let introBlend = 0;
+    let raf = 0;
+    let swayTime = 0;
+
+    const config = {
+      radius: window.innerWidth < 600 ? 130 : window.innerWidth < 900 ? 170 : 220,
+      cardSpacing: (Math.PI * 2) / total,
+      tilt: -8,
+      dragSensitivity: 0.005,
+      friction: 0.95,
+      introGap: window.innerWidth < 600 ? 140 : window.innerWidth < 900 ? 180 : 240,
+      introSlant: 6,
+    };
+
+    const onFirstInteraction = () => {
+      if (!hasInteracted) {
+        hasInteracted = true;
+        autoRotateSpeed = 0.0003;
+      }
+    };
+
+    cards.forEach((card, i) => {
+      card.dataset.index = String(i);
+      card.dataset.baseAngle = String(i * config.cardSpacing);
+
+      card.addEventListener("click", () => {
+        if (hasDragged) return;
+        onFirstInteraction();
+        const baseAngle = parseFloat(card.dataset.baseAngle || "0");
+        const angle = baseAngle + currentAngle;
+        const z = Math.cos(angle) * config.radius;
+        const depthRatio = (z + config.radius) / (config.radius * 2);
+        if (depthRatio <= 0.5) {
+          const cardIndex = parseInt(card.dataset.index || "0");
+          const currentRot = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+          const targetRot = Math.PI * 2 - cardIndex * config.cardSpacing;
+          targetAngle += targetRot - currentRot;
+          click(880, 0.04);
+          return;
+        }
+        const slug = card.getAttribute("data-profile");
+        if (slug) {
+          click(660);
+          openProfile(slug);
+        }
+      });
+
+      card.addEventListener("mouseenter", () => {
+        hoveredCard = card;
+        autoRotateSpeed = 0;
+        click(1400, 0.025);
+      });
+      card.addEventListener("mouseleave", () => {
+        hoveredCard = null;
+        if (hasInteracted) autoRotateSpeed = 0.0003;
+      });
+    });
+
+    const onMouseDown = (e: MouseEvent) => {
+      onFirstInteraction();
+      isDragging = true;
+      hasDragged = false;
+      startX = e.clientX;
+      startAngle = targetAngle;
+      velocity = 0;
+      container.style.cursor = "grabbing";
+      autoRotateSpeed = 0;
+    };
+    const onMouseUp = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      container.style.cursor = "default";
+      targetAngle += velocity * 20;
+      if (hasInteracted) autoRotateSpeed = 0.0003;
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      const delta = e.clientX - startX;
+      if (Math.abs(delta) > 10) hasDragged = true;
+      const newAngle = startAngle + delta * config.dragSensitivity;
+      velocity = newAngle - targetAngle;
+      targetAngle = newAngle;
+    };
+    const onTouchStart = (e: TouchEvent) => {
+      onFirstInteraction();
+      isDragging = true;
+      hasDragged = false;
+      startX = e.touches[0].clientX;
+      startAngle = targetAngle;
+      velocity = 0;
+      autoRotateSpeed = 0;
+    };
+    const onTouchEnd = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      targetAngle += velocity * 20;
+      if (hasInteracted) autoRotateSpeed = 0.0003;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!isDragging) return;
+      const delta = e.touches[0].clientX - startX;
+      if (Math.abs(delta) > 10) hasDragged = true;
+      const newAngle = startAngle + delta * config.dragSensitivity;
+      velocity = newAngle - targetAngle;
+      targetAngle = newAngle;
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") { onFirstInteraction(); targetAngle -= 0.5; }
+      else if (e.key === "ArrowRight") { onFirstInteraction(); targetAngle += 0.5; }
+    };
+
+    container.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("mousemove", onMouseMove);
+    container.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchend", onTouchEnd);
+    document.addEventListener("touchmove", onTouchMove, { passive: true });
+    document.addEventListener("keydown", onKey);
+
+    const animate = () => {
+      swayTime += 0.02;
+      if (hasInteracted && introBlend < 1) {
+        introBlend += 0.02;
+        if (introBlend > 1) introBlend = 1;
+      }
+      if (!isDragging && !hoveredCard) targetAngle += autoRotateSpeed;
+      if (!isDragging) { velocity *= config.friction; targetAngle += velocity; }
+      currentAngle += (targetAngle - currentAngle) * 0.1;
+
+      cards.forEach((card, i) => {
+        const baseAngle = parseFloat(card.dataset.baseAngle || "0");
+        const angle = baseAngle + currentAngle;
+        const swayOff = i * 0.8;
+        const swayY = Math.sin(swayTime + swayOff) * 8;
+        const swayRZ = Math.sin(swayTime * 0.5 + swayOff) * 1.5;
+
+        const introOffset = i - (total - 1) / 2;
+        const introX = introOffset * config.introGap;
+        const introSlant = introOffset * config.introSlant;
+        const introZ = introOffset === 0 ? 40 : 0;
+
+        const orbX = Math.sin(angle) * config.radius;
+        const orbZ = Math.cos(angle) * config.radius;
+        const orbRotY = -angle * (180 / Math.PI);
+        const depthRatio = (orbZ + config.radius) / (config.radius * 2);
+        const isFront = depthRatio > 0.5;
+        const orbOpacity = isFront ? 1 : 0.35 + depthRatio * 0.3;
+        const orbScale = isFront ? 1 : 0.75 + depthRatio * 0.15;
+
+        const t = introBlend;
+        const x = introX * (1 - t) + orbX * t;
+        const z = introZ * (1 - t) + orbZ * t;
+        const rotY = introSlant * (1 - t) + orbRotY * t;
+        const opacity = 1 * (1 - t) + orbOpacity * t;
+        const scale = 1 * (1 - t) + orbScale * t;
+
+        card.style.zIndex = String(Math.floor(z + config.radius));
+        card.style.transform = `translateX(${x}px) translateY(${swayY}px) translateZ(${z}px) rotateY(${rotY}deg) rotateX(${config.tilt}deg) rotateZ(${swayRZ}deg)`;
+        card.style.opacity = String(opacity);
+        const face = card.querySelector<HTMLDivElement>(".card-face");
+        if (face) face.style.transform = `scale(${scale})`;
+      });
+
+      raf = requestAnimationFrame(animate);
+    };
+    animate();
+
+    const onVis = () => {
+      if (hasInteracted) autoRotateSpeed = document.hidden ? 0 : 0.0003;
+    };
+    document.addEventListener("visibilitychange", onVis);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      container.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.removeEventListener("mousemove", onMouseMove);
+      container.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchend", onTouchEnd);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (titleRef.current) gsap.to(titleRef.current, { opacity: 1, duration: 1.5, ease: "power2.out", delay: 0.4 });
+    if (taglineRef.current) {
+      const spans = taglineRef.current.querySelectorAll("span.word");
+      gsap.fromTo(spans, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.8, stagger: 0.18, delay: 1.2, ease: "power2.out" });
+    }
+    if (cornerLRef.current) gsap.to(cornerLRef.current, { opacity: 0.5, duration: 1, delay: 1.5 });
+    if (cornerRRef.current) gsap.to(cornerRRef.current, { opacity: 0.5, duration: 1, delay: 1.5 });
+  }, []);
+
+  const openProfile = (slug: string) => {
+    if (active) return;
+    setActive(slug);
+    const landingEls = [titleRef.current, taglineRef.current, cornerLRef.current, cornerRRef.current];
+    landingEls.forEach((el) => {
+      if (el) gsap.to(el, { autoAlpha: 0, duration: 0.5, ease: "power2.inOut" });
+    });
+    setTimeout(() => {
+      const profEl = profileRefs.current[slug];
+      if (profEl) {
+        profEl.classList.add("active");
+        gsap.fromTo(profEl, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.7, ease: "power2.out" });
+      }
+      const back = backBtnRef.current;
+      if (back) {
+        back.classList.add("visible");
+        gsap.fromTo(back, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.5, ease: "power2.out" });
+      }
+    }, 500);
+    history.pushState(null, "", "#" + slug);
+  };
+
+  const closeProfile = () => {
+    if (!active) return;
+    click(440);
+    const profEl = profileRefs.current[active];
+    if (profEl) {
+      gsap.to(profEl, { autoAlpha: 0, duration: 0.5, ease: "power2.inOut", onComplete: () => profEl.classList.remove("active") });
+    }
+    const back = backBtnRef.current;
+    if (back) {
+      gsap.to(back, { autoAlpha: 0, duration: 0.3, onComplete: () => back.classList.remove("visible") });
+    }
+    setTimeout(() => {
+      const landingEls = [titleRef.current, taglineRef.current, cornerLRef.current, cornerRRef.current];
+      landingEls.forEach((el, i) => {
+        if (el) gsap.to(el, { autoAlpha: i === 0 ? 1 : i === 1 ? 1 : 0.5, duration: 0.7, ease: "power2.out" });
+      });
+    }, 350);
+    setActive(null);
+    history.pushState(null, "", window.location.pathname);
+  };
+
+  useEffect(() => {
+    const onPop = () => {
+      const hash = window.location.hash.replace("#", "");
+      const exists = team.find((m) => m.slug === hash);
+      if (exists && !active) openProfile(hash);
+      else if (!exists && active) closeProfile();
+    };
+    window.addEventListener("popstate", onPop);
+    const initialHash = window.location.hash.replace("#", "");
+    if (team.find((m) => m.slug === initialHash)) {
+      setTimeout(() => openProfile(initialHash), 1200);
+    }
+    return () => window.removeEventListener("popstate", onPop);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const copyTelegram = (e: React.MouseEvent, url: string) => {
+    e.preventDefault();
+    click(660);
+    navigator.clipboard?.writeText(url).then(() => {
+      setToast("copied: " + url);
+      window.setTimeout(() => setToast(null), 1800);
+    });
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const toggleSound = () => {
+    click(440);
+    if (sound) { stopAmbient(); setSound(false); } else { startAmbient(); setSound(true); }
+  };
+
+  const quote = "even the darkness has arms";
+
   return (
-    <div className="min-h-screen relative overflow-hidden bg-background">
-      <div className="cloud-bg" />
-      <div className="fixed inset-0 scanline pointer-events-none z-[1]" />
+    <div>
+      <img src="/images/clouds.jpg" alt="" className="rain-clouds" draggable={false} />
+      <div className="black-fade" />
+      <div className="scanlines" />
+      <div className="grain-overlay" />
+      <div className="flicker" />
 
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-3">
-          <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-          <span className="font-serif-elite text-lg tracking-[0.4em] text-glow">lost.移动</span>
-        </div>
-        <div className="hidden md:flex items-center gap-6 text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
-          <span>collective</span>
-          <span className="text-white/60">est. mmxxiii</span>
-        </div>
-        <AmbientToggle />
-      </header>
-
-      <Vortex />
-
-      <div className="fixed left-1/2 -translate-x-1/2 bottom-24 z-40 text-center pointer-events-none">
-        <div className="font-script text-5xl md:text-7xl text-white/90 text-glow leading-none">lost</div>
-        <div className="mt-2 text-[10px] tracking-[0.6em] uppercase text-muted-foreground">underground · cybersec · collective</div>
+      <div ref={titleRef} className="page-title">
+        <span className="title-sub">lost</span>
+        <br />
+        <span className="title-main"><i>lost.移动</i></span>
       </div>
 
-      <footer className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-between px-6 py-4 text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
-        <span>// click a vessel to enter</span>
-        <span className="hidden md:inline">no logs · no traces</span>
-        <span>v1.0.0</span>
-      </footer>
+      <div className="vortex-container" ref={containerRef}>
+        <div className="vortex-scene">
+          <div className="vortex-group">
+            {team.map((m) => (
+              <div
+                key={m.slug}
+                className="vortex-card"
+                data-profile={m.slug}
+              >
+                <div className="card-face">
+                  <img className="card-image" src={m.image} alt={m.name} draggable={false} />
+                  <div className="card-label">{m.name}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div ref={taglineRef} className="tagline-bottom">
+        <span>
+          {quote.split(" ").map((w, i) => (
+            <span key={i} className="word" style={{ opacity: 0, visibility: "hidden" }}>{w}{i < quote.split(" ").length - 1 ? " " : ""}</span>
+          ))}
+        </span>
+      </div>
+
+      <div ref={cornerLRef} className="landing-corner" style={{ opacity: 0 }}>
+        <span className="corner-label">collective</span>
+        <span className="corner-val">underground · cybersec</span>
+      </div>
+      <div ref={cornerRRef} className="landing-corner-right" style={{ opacity: 0 }}>
+        <span className="corner-label">est.</span>
+        <span className="corner-val">mmxxiii</span>
+      </div>
+
+      {team.map((m) => (
+        <div
+          key={m.slug}
+          ref={(el) => { profileRefs.current[m.slug] = el; }}
+          className="profile-view"
+        >
+          <div className="profile-card-large">
+            <img src={m.image} alt={m.name} draggable={false} />
+          </div>
+          <div className="profile-info">
+            <h2 className="profile-name">{m.name}</h2>
+            <p className="profile-tagline">{m.tagline}</p>
+
+            <div className="profile-section">
+              <span className="profile-section-label">links</span>
+              <div className="profile-links">
+                <a href={m.telegram} className="profile-link" onClick={(e) => copyTelegram(e, m.telegram)}>
+                  <TelegramIcon size={12} />
+                  telegram
+                </a>
+              </div>
+            </div>
+
+            <div className="profile-section">
+              <span className="profile-section-label">interests</span>
+              <div className="profile-interests">
+                {m.interests.map((it, i) => (
+                  <span key={it}>
+                    {it}
+                    {i < m.interests.length - 1 && <span className="sep">✧</span>}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="profile-section">
+              <span className="profile-section-label">achievements</span>
+              <div className="profile-achievements">
+                {m.achievements.map((a, i) => (
+                  <div key={a} className="achievement">
+                    <span className="achievement-num">0{i + 1}</span>
+                    <span>{a}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      <button ref={backBtnRef} className="back-btn" onClick={closeProfile}>← return</button>
+
+      <button className="sound-btn" onClick={toggleSound} aria-label="toggle ambient sound">
+        {sound ? <SoundOnIcon size={12} /> : <SoundOffIcon size={12} />}
+        <span>{sound ? "ambient" : "muted"}</span>
+      </button>
+
+      {toast && <div className="copy-toast show">{toast}</div>}
     </div>
   );
 }
