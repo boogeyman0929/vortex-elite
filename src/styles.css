@@ -3,8 +3,15 @@
 @import "tw-animate-css";
 
 @font-face {
-  font-family: 'Labyrinthe';
-  src: url('/fonts/Labyrinthe.ttf') format('truetype');
+  font-family: 'Batman';
+  src: url('/fonts/BatmanEvolution.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bilbo';
+  src: url('/fonts/Bilbo.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -12,13 +19,6 @@
 @font-face {
   font-family: 'Minecraft';
   src: url('/fonts/Minecraft.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Fleur';
-  src: url('/fonts/FleurDeCerisier.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -80,7 +80,7 @@
   html, body {
     background: #000;
     color: #fff;
-    font-family: 'Minecraft', 'Courier New', monospace;
+    font-family: 'Bilbo', serif;
     overflow: hidden;
     margin: 0;
     -webkit-user-select: none;
@@ -89,25 +89,20 @@
   ::selection { background: rgba(255,255,255,0.2); color: white; }
 }
 
-.font-serif-elite { font-family: 'Labyrinthe', serif; }
-.font-mono-hacker { font-family: 'Minecraft', monospace; }
-.font-script { font-family: 'Fleur', serif; }
+.font-batman { font-family: 'Batman', serif; letter-spacing: 2px; }
+.font-bilbo { font-family: 'Bilbo', serif; }
+.font-mc { font-family: 'Minecraft', monospace; }
 
-.rain-clouds {
+.bg-stars {
   position: fixed;
-  inset: -10%;
-  width: 120%;
-  height: 120%;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   z-index: 0;
-  opacity: 0.55;
-  filter: grayscale(1) contrast(1.1) brightness(0.6);
+  opacity: 0.45;
+  filter: grayscale(1) contrast(1.1) brightness(0.7);
   pointer-events: none;
-  animation: cloudDrift 60s ease-in-out infinite alternate;
-}
-@keyframes cloudDrift {
-  0% { transform: translate(0,0) scale(1.05); }
-  100% { transform: translate(-4%, 2%) scale(1.12); }
 }
 
 .black-fade {
@@ -142,6 +137,19 @@
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
 
+.bg-black-cover {
+  position: fixed; inset: 0; z-index: 540;
+  background: #000;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+.bg-black-cover.active {
+  opacity: 1;
+  visibility: visible;
+}
+
 .page-title {
   position: fixed;
   left: 50%;
@@ -150,24 +158,20 @@
   text-align: center;
   z-index: 501;
   opacity: 0;
-  pointer-events: none;
   white-space: nowrap;
+  cursor: pointer;
+  transition: text-shadow 0.3s ease, transform 0.3s ease;
+}
+.page-title:hover {
+  text-shadow: 0 0 50px rgba(255,255,255,0.6);
 }
 .page-title .title-main {
-  font-family: 'Labyrinthe', serif;
-  font-size: 30pt;
-  font-style: italic;
-  text-shadow: 0 0 30px rgba(255,255,255,0.4);
-  letter-spacing: 2px;
-}
-.page-title .title-sub {
-  display: block;
-  font-family: 'Fleur', serif;
-  font-size: 48pt;
-  margin-bottom: -12px;
-  opacity: 0.6;
-  text-shadow: 0 0 40px rgba(255,255,255,0.5);
+  font-family: 'Batman', serif;
+  font-size: 42pt;
   font-style: normal;
+  text-shadow: 0 0 30px rgba(255,255,255,0.4);
+  letter-spacing: 4px;
+  text-transform: lowercase;
 }
 
 .vortex-container {
@@ -229,10 +233,11 @@
   pointer-events: none;
   z-index: 2;
 }
-.vortex-card:hover .card-face {
+.vortex-card:hover .card-face,
+.vortex-card.is-hover .card-face {
   background: rgba(30, 30, 35, 0.9);
   border-color: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 25px rgba(255, 255, 255, 0.15), 0 10px 40px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 25px rgba(255, 255, 255, 0.18), 0 10px 40px rgba(255, 255, 255, 0.12);
 }
 .card-image {
   width: 100%;
@@ -241,8 +246,10 @@
   display: block;
   filter: grayscale(0.3) contrast(1.1);
   transition: filter 0.3s ease;
+  pointer-events: none;
 }
-.vortex-card:hover .card-image {
+.vortex-card:hover .card-image,
+.vortex-card.is-hover .card-image {
   filter: grayscale(0) contrast(1);
 }
 .card-label {
@@ -258,8 +265,10 @@
   color: #fff;
   font-family: 'Minecraft', monospace;
   transition: all 0.3s ease;
+  pointer-events: none;
 }
-.vortex-card:hover .card-label {
+.vortex-card:hover .card-label,
+.vortex-card.is-hover .card-label {
   background: rgba(255, 255, 255, 0.95);
   color: #000;
 }
@@ -269,8 +278,7 @@
   .vortex-card { width: 140px; height: 220px; margin-left: -70px; margin-top: -110px; }
   .card-image { height: 155px; }
   .card-label { font-size: 12px; letter-spacing: 2px; }
-  .page-title .title-main { font-size: 22pt; }
-  .page-title .title-sub { font-size: 38pt; }
+  .page-title .title-main { font-size: 30pt; }
 }
 @media (max-width: 600px) {
   .vortex-container { height: 350px; }
@@ -278,8 +286,7 @@
   .card-image { height: 130px; }
   .card-label { font-size: 10px; }
   .page-title { top: calc(50% - 180px); }
-  .page-title .title-main { font-size: 18pt; }
-  .page-title .title-sub { font-size: 30pt; }
+  .page-title .title-main { font-size: 24pt; }
 }
 
 .tagline-bottom {
@@ -293,10 +300,11 @@
   pointer-events: none;
 }
 .tagline-bottom span {
-  font-size: 11pt;
+  font-size: 14pt;
   font-style: italic;
-  opacity: 0.6;
+  opacity: 0.7;
   letter-spacing: 1px;
+  font-family: 'Bilbo', serif;
 }
 
 @media (max-width: 900px) {
@@ -304,7 +312,7 @@
 }
 @media (max-width: 600px) {
   .tagline-bottom { top: calc(50% + 170px); width: 90%; }
-  .tagline-bottom span { font-size: 9pt; }
+  .tagline-bottom span { font-size: 11pt; }
 }
 
 .landing-corner {
@@ -312,13 +320,14 @@
   bottom: 20px;
   left: 20px;
   z-index: 501;
-  font-size: 9pt;
+  font-size: 10pt;
   font-style: italic;
-  opacity: 0.5;
+  opacity: 0.6;
   letter-spacing: 1px;
   line-height: 1.5;
+  font-family: 'Bilbo', serif;
 }
-.landing-corner .corner-label { font-weight: 700; color: #555; display: block; }
+.landing-corner .corner-label { font-weight: 700; color: #777; display: block; }
 .landing-corner .corner-val { color: #fff; display: block; }
 
 .landing-corner-right {
@@ -326,21 +335,22 @@
   bottom: 20px;
   right: 20px;
   z-index: 501;
-  font-size: 9pt;
+  font-size: 10pt;
   font-style: italic;
-  opacity: 0.5;
+  opacity: 0.6;
   letter-spacing: 1px;
   text-align: right;
   line-height: 1.5;
+  font-family: 'Bilbo', serif;
 }
-.landing-corner-right .corner-label { font-weight: 700; color: #555; display: block; }
+.landing-corner-right .corner-label { font-weight: 700; color: #777; display: block; }
 .landing-corner-right .corner-val { color: #fff; display: block; }
 
 .profile-view {
   position: fixed;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  z-index: 550;
+  z-index: 560;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -351,6 +361,7 @@
   pointer-events: none;
   padding: 80px 24px;
   box-sizing: border-box;
+  background: #000;
 }
 .profile-view.active {
   visibility: visible;
@@ -397,19 +408,19 @@
 .profile-info::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); }
 
 .profile-name {
-  font-family: 'Labyrinthe', serif;
+  font-family: 'Batman', serif;
   font-size: 56pt;
   font-weight: normal;
   margin: 0;
-  letter-spacing: 1px;
-  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-transform: lowercase;
   line-height: 0.9;
   text-shadow: 0 0 30px rgba(255,255,255,0.3);
 }
 .profile-tagline {
-  font-family: 'Fleur', serif;
+  font-family: 'Bilbo', serif;
   font-size: 18pt;
-  opacity: 0.5;
+  opacity: 0.6;
   font-style: italic;
   margin: 8px 0 28px 0;
 }
@@ -453,10 +464,11 @@
 }
 
 .profile-interests {
-  font-size: 10pt;
+  font-size: 11pt;
   line-height: 2;
-  opacity: 0.85;
+  opacity: 0.9;
   letter-spacing: 0.5px;
+  font-family: 'Bilbo', serif;
 }
 .profile-interests .sep { opacity: 0.4; margin: 0 8px; font-style: normal; }
 
@@ -468,9 +480,10 @@
   padding: 8px 12px;
   outline: 1px dotted rgba(255,255,255,0.18);
   background: rgba(255,255,255,0.02);
-  font-size: 9.5pt;
+  font-size: 11pt;
   line-height: 1.5;
   transition: all 0.25s ease;
+  font-family: 'Bilbo', serif;
 }
 .achievement:hover {
   outline: 1px solid rgba(255,255,255,0.5);
@@ -482,7 +495,7 @@
   opacity: 0.5;
   letter-spacing: 1px;
   flex-shrink: 0;
-  padding-top: 2px;
+  padding-top: 4px;
 }
 
 .back-btn {
@@ -548,12 +561,6 @@
   background: rgba(255,255,255,0.95);
   color: #000;
   outline: 1px solid #fff;
-}
-
-.hidden-section {
-  opacity: 0 !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
 }
 
 @media (max-width: 900px) {
